@@ -63,6 +63,8 @@ class TgUploader:
         new_path = os.path.join(dirpath, filee)
         os.rename(up_path, new_path)
         up_path = new_path
+        else:
+            cap_mono = f"<code>{filee}</code>"
         notMedia = False
         thumb = self.thumb
         try:
