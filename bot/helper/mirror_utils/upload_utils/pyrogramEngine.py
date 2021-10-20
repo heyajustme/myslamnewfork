@@ -10,7 +10,7 @@ from pyrogram.errors import FloodWait
 from hachoir.parser import createParser
 from hachoir.metadata import extractMetadata
 
-from bot import app, DOWNLOAD_DIR, AS_DOCUMENT, AS_DOC_USERS, AS_MEDIA_USERS
+from bot import app, DOWNLOAD_DIR, AS_DOCUMENT, AS_DOC_USERS, AS_MEDIA_USERS, CUSTOM_FILENAME
 from bot.helper.ext_utils.fs_utils import take_ss 
 
 LOGGER = logging.getLogger(__name__)
