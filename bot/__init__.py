@@ -349,7 +349,7 @@ try:
     CUSTOM_FILENAME = getConfig('CUSTOM_FILENAME')
     if len(CUSTOM_FILENAME) == 0:
         raise KeyError
-   except KeyError:
+except KeyError:
         CUSTOM_FILENAME = None
 try:
     RECURSIVE_SEARCH = getConfig('RECURSIVE_SEARCH')
