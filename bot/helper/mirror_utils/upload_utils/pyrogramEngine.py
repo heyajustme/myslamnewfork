@@ -44,7 +44,7 @@ class TgUploader:
         path = f"{DOWNLOAD_DIR}{self.message_id}"
         self.user_settings()
         for dirpath, subdir, files in sorted(os.walk(path)):
-            for file in sorted(files):
+            for filee in sorted(files):
                 if self.is_cancelled:
                     return
                 up_path = os.path.join(dirpath, filee)
