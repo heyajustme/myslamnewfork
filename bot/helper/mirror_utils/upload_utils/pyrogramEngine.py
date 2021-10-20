@@ -47,24 +47,24 @@ class TgUploader:
             for file in sorted(files):
                 if self.is_cancelled:
                     return
-                up_path = os.path.join(dirpath, file)
-                self.upload_file(up_path, file, dirpath)
+                up_path = os.path.join(dirpath, filee)
+                self.upload_file(up_path, filee, dirpath)
                 if self.is_cancelled:
                     return
-                msgs_dict[file] = self.sent_msg.message_id
+                msgs_dict[filee] = self.sent_msg.message_id
                 self.last_uploaded = 0
         LOGGER.info(f"Leech Done: {self.name}")
         self.__listener.onUploadComplete(self.name, None, msgs_dict, None, None)
 
-    def upload_file(self, up_path, file, dirpath):
+    def upload_file(self, up_path, filee, dirpath):
         if CUSTOM_FILENAME is not None:
-            cap_mono = f"{CUSTOM_FILENAME}<code>{file}</code>"
-            filee = f"{CUSTOM_FILENAME}{file}"
-            new_path = os.path.join(dirpath, file)
+            cap_mono = f"{CUSTOM_FILENAME}<code>{filee}</code>"
+            filee = f"{CUSTOM_FILENAME}{filee}"
+            new_path = os.path.join(dirpath, filee)
             os.rename(up_path, new_path)
             up_path = new_path
         else:
-            cap_mono = f"<code>{file}</code>"
+            cap_mono = f"<code>{filee}</code>"
         notMedia = False
         thumb = self.thumb
         try:
@@ -80,7 +80,7 @@ class TgUploader:
                         return
                     if not file.upper().endswith(("MKV", "MP4")):
                         file = os.path.splitext(file)[0] + '.mp4'
-                        new_path = os.path.join(dirpath, file)
+                        new_path = os.path.join(dirpath, filee)
                         os.rename(up_path, new_path)
                         up_path = new_path
                     self.sent_msg = self.sent_msg.reply_video(video=up_path,
