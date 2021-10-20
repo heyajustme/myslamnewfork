@@ -57,7 +57,9 @@ class TgUploader:
         self.__listener.onUploadComplete(self.name, None, msgs_dict, None, None)
 
     def upload_file(self, up_path, file, dirpath):
-        cap_mono = f"<code>{file}</code>"
+        if CUSTOM_FILENAME is not None:
+        cap_mono = f"{CUSTOM_FILENAME}<code>{file}</code>"
+        filee = f"{CUSTOM_FILENAME}{filee}"
         notMedia = False
         thumb = self.thumb
         try:
