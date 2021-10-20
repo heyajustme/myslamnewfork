@@ -7,18 +7,16 @@ import logging
 import time
 
 from pyrogram.errors import FloodWait
-from hachoir.parser import createParser
-from hachoir.metadata import extractMetadata
 
 from bot import app, DOWNLOAD_DIR, AS_DOCUMENT, AS_DOC_USERS, AS_MEDIA_USERS, CUSTOM_FILENAME
-from bot.helper.ext_utils.fs_utils import take_ss 
+from bot.helper.ext_utils.fs_utils import take_ss, get_media_info
 
 LOGGER = logging.getLogger(__name__)
-logging.getLogger("pyrogram").setLevel(logging.WARNING)
+logging.getLogger("pyrogram").setLevel(logging.ERROR)
 
 VIDEO_SUFFIXES = ("MKV", "MP4", "MOV", "WMV", "3GP", "MPG", "WEBM", "AVI", "FLV", "M4V")
 AUDIO_SUFFIXES = ("MP3", "M4A", "M4B", "FLAC", "WAV", "AIF", "OGG", "AAC", "DTS", "MID", "AMR", "MKA")
-IMAGE_SUFFIXES = ("JPG", "JPX", "PNG", "GIF", "WEBP", "CR2", "TIF", "BMP", "JXR", "PSD", "ICO", "HEIC")
+IMAGE_SUFFIXES = ("JPG", "JPX", "PNG", "GIF", "WEBP", "CR2", "TIF", "BMP", "JXR", "PSD", "ICO", "HEIC", "JPEG")
 
 
 class TgUploader:
@@ -41,20 +39,28 @@ class TgUploader:
 
     def upload(self):
         msgs_dict = {}
+        corrupted = 0
         path = f"{DOWNLOAD_DIR}{self.message_id}"
         self.user_settings()
         for dirpath, subdir, files in sorted(os.walk(path)):
             for filee in sorted(files):
                 if self.is_cancelled:
                     return
+                if filee.endswith('.torrent'):
+                    continue
                 up_path = os.path.join(dirpath, filee)
+                fsize = os.path.getsize(up_path)
+                if fsize == 0:
+                    corrupted += 1
+                    continue
                 self.upload_file(up_path, filee, dirpath)
                 if self.is_cancelled:
                     return
                 msgs_dict[filee] = self.sent_msg.message_id
                 self.last_uploaded = 0
+                time.sleep(1.5)
         LOGGER.info(f"Leech Done: {self.name}")
-        self.__listener.onUploadComplete(self.name, None, msgs_dict, None, None)
+        self.__listener.onUploadComplete(self.name, None, msgs_dict, None, corrupted)
 
     def upload_file(self, up_path, filee, dirpath):
         if CUSTOM_FILENAME is not None:
@@ -70,16 +76,15 @@ class TgUploader:
         try:
             if not self.as_doc:
                 duration = 0
-                if file.upper().endswith(VIDEO_SUFFIXES):
-                    metadata = extractMetadata(createParser(up_path))
-                    if metadata.has("duration"):
-                        duration = metadata.get("duration").seconds
+                if filee.upper().endswith(VIDEO_SUFFIXES):
+                    duration = get_media_info(up_path)[0]
                     if thumb is None:
                         thumb = take_ss(up_path)
-                    if self.is_cancelled:
-                        return
-                    if not file.upper().endswith(("MKV", "MP4")):
-                        file = os.path.splitext(file)[0] + '.mp4'
+                        if self.is_cancelled:
+                            os.remove(thumb)
+                            return
+                    if not filee.upper().endswith(("MKV", "MP4")):
+                        filee = os.path.splitext(filee)[0] + '.mp4'
                         new_path = os.path.join(dirpath, filee)
                         os.rename(up_path, new_path)
                         up_path = new_path
@@ -94,14 +99,8 @@ class TgUploader:
                                                               supports_streaming=True,
                                                               disable_notification=True,
                                                               progress=self.upload_progress)
-                    if self.thumb is None and thumb is not None and os.path.lexists(thumb):
-                        os.remove(thumb)
-                elif file.upper().endswith(AUDIO_SUFFIXES):
-                    metadata = extractMetadata(createParser(up_path))
-                    if metadata.has("duration"):
-                        duration = metadata.get('duration').seconds
-                    title = metadata.get("title") if metadata.has("title") else None
-                    artist = metadata.get("artist") if metadata.has("artist") else None
+                elif filee.upper().endswith(AUDIO_SUFFIXES):
+                    duration , artist, title = get_media_info(up_path)
                     self.sent_msg = self.sent_msg.reply_audio(audio=up_path,
                                                               quote=True,
                                                               caption=cap_mono,
@@ -112,7 +111,7 @@ class TgUploader:
                                                               thumb=thumb,
                                                               disable_notification=True,
                                                               progress=self.upload_progress)
-                elif file.upper().endswith(IMAGE_SUFFIXES):
+                elif filee.upper().endswith(IMAGE_SUFFIXES):
                     self.sent_msg = self.sent_msg.reply_photo(photo=up_path,
                                                               quote=True,
                                                               caption=cap_mono,
@@ -122,10 +121,11 @@ class TgUploader:
                 else:
                     notMedia = True
             if self.as_doc or notMedia:
-                if file.upper().endswith(VIDEO_SUFFIXES) and thumb is None:
+                if filee.upper().endswith(VIDEO_SUFFIXES) and thumb is None:
                     thumb = take_ss(up_path)
-                if self.is_cancelled:
-                    return
+                    if self.is_cancelled:
+                        os.remove(thumb)
+                        return
                 self.sent_msg = self.sent_msg.reply_document(document=up_path,
                                                              quote=True,
                                                              thumb=thumb,
@@ -133,13 +133,18 @@ class TgUploader:
                                                              parse_mode="html",
                                                              disable_notification=True,
                                                              progress=self.upload_progress)
-                if self.thumb is None and thumb is not None and os.path.lexists(thumb):
-                    os.remove(thumb)
-            if not self.is_cancelled:
-                os.remove(up_path)
         except FloodWait as f:
             LOGGER.info(f)
             time.sleep(f.x)
+        except Exception as e:
+            LOGGER.error(str(e))
+            self.is_cancelled = True
+            self.__listener.onUploadError(str(e))
+        if self.thumb is None and thumb is not None and os.path.lexists(thumb):
+            os.remove(thumb)
+        if not self.is_cancelled:
+            os.remove(up_path)
+
     def upload_progress(self, current, total):
         if self.is_cancelled:
             self.__app.stop_transmission()
