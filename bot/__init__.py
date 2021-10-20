@@ -350,7 +350,7 @@ try:
     if len(CUSTOM_FILENAME) == 0:
         raise KeyError
     except KeyError:
-       CUSTOM_FILENAME = None
+        CUSTOM_FILENAME = None
 try:
     RECURSIVE_SEARCH = getConfig('RECURSIVE_SEARCH')
     RECURSIVE_SEARCH = RECURSIVE_SEARCH.lower() == 'true'
